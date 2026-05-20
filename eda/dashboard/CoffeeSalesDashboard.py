@@ -4,7 +4,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
 
-# ── Data ──────────────────────────────────────────────────────────────────────
 df = pd.read_csv('Project.csv')
 
 MONTH_ORDER = ['January', 'February', 'March', 'April', 'May', 'June']
@@ -32,17 +31,14 @@ CAT_COLORS = {
     'Packaged Chocolate':  '#6d4c41',
 }
 
-# ── KPI base numbers ──────────────────────────────────────────────────────────
 TOTAL_REV   = df['Total_Bill'].sum()
 TOTAL_TXN   = len(df)
 AVG_TXN     = df['Total_Bill'].mean()
 TOP_STORE   = df.groupby('store_location')['Total_Bill'].sum().idxmax()
 
-# ── App ───────────────────────────────────────────────────────────────────────
 app = Dash(__name__)
 app.title = 'Coffee Shop Sales Dashboard'
 
-# ── Styles ────────────────────────────────────────────────────────────────────
 FONT        = 'Georgia, serif'
 BG          = '#f5f0eb'
 CARD_BG     = '#ffffff'
@@ -67,10 +63,8 @@ kpi_style = {
     'margin':     '0 8px',
 }
 
-# ── Layout ────────────────────────────────────────────────────────────────────
 app.layout = html.Div(style={'backgroundColor': BG, 'fontFamily': FONT, 'minHeight': '100vh'}, children=[
 
-    # Header
     html.Div(style={
         'backgroundColor': HEADER_BG,
         'padding':         '28px 40px 20px 40px',
@@ -82,7 +76,6 @@ app.layout = html.Div(style={'backgroundColor': BG, 'fontFamily': FONT, 'minHeig
         html.P('January to June 2023  |  149,116 Transactions  |  3 NYC Locations: Astoria, Hell\'s Kitchen, Lower Manhattan',
                style={'color': '#aaa', 'margin': '0 0 18px 0', 'fontSize': '13px'}),
 
-        # Store filter
         html.Div(style={'display': 'flex', 'alignItems': 'center', 'gap': '12px'}, children=[
             html.Label('Filter by Store:', style={'color': TEXT_LIGHT, 'fontSize': '13px', 'whiteSpace': 'nowrap'}),
             dcc.Dropdown(
@@ -95,7 +88,6 @@ app.layout = html.Div(style={'backgroundColor': BG, 'fontFamily': FONT, 'minHeig
         ]),
     ]),
 
-    # KPI Row
     html.Div(style={'display': 'flex', 'padding': '24px 40px 8px 40px', 'gap': '0'}, children=[
         html.Div(id='kpi-revenue', style=kpi_style),
         html.Div(id='kpi-transactions', style=kpi_style),
@@ -103,7 +95,6 @@ app.layout = html.Div(style={'backgroundColor': BG, 'fontFamily': FONT, 'minHeig
         html.Div(id='kpi-top-store', style=kpi_style),
     ]),
 
-    # Row 1: Monthly Trend + Category Heatmap
     html.Div(style={'display': 'flex', 'padding': '16px 40px', 'gap': '16px'}, children=[
         html.Div(style={**card_style, 'flex': '1.4'}, children=[
             html.H3('Monthly Revenue Trend', style={'margin': '0 0 4px 0', 'fontSize': '15px', 'color': TEXT_DARK}),
@@ -119,7 +110,6 @@ app.layout = html.Div(style={'backgroundColor': BG, 'fontFamily': FONT, 'minHeig
         ]),
     ]),
 
-    # Row 2: Hour x Store Heatmap + Top 10 Products
     html.Div(style={'display': 'flex', 'padding': '0 40px 16px 40px', 'gap': '16px'}, children=[
         html.Div(style={**card_style, 'flex': '1.2'}, children=[
             html.H3('Revenue by Hour and Store', style={'margin': '0 0 4px 0', 'fontSize': '15px', 'color': TEXT_DARK}),
@@ -135,7 +125,6 @@ app.layout = html.Div(style={'backgroundColor': BG, 'fontFamily': FONT, 'minHeig
         ]),
     ]),
 
-    # Footer
     html.Div(style={
         'backgroundColor': HEADER_BG,
         'padding':         '12px 40px',
@@ -147,15 +136,11 @@ app.layout = html.Div(style={'backgroundColor': BG, 'fontFamily': FONT, 'minHeig
     ]),
 ])
 
-# ── Callbacks ─────────────────────────────────────────────────────────────────
-
 def filter_df(store):
     if store == 'All Stores':
         return df
     return df[df['store_location'] == store]
 
-
-# KPI cards
 @app.callback(
     Output('kpi-revenue',       'children'),
     Output('kpi-transactions',  'children'),
@@ -185,8 +170,6 @@ def update_kpis(store):
         kpi_card('Top Store',          top),
     )
 
-
-# Monthly trend
 @app.callback(
     Output('monthly-trend', 'figure'),
     Input('store-filter', 'value'),
@@ -233,8 +216,6 @@ def update_monthly(store):
     )
     return fig
 
-
-# Category heatmap
 @app.callback(
     Output('category-heatmap', 'figure'),
     Input('store-filter', 'value'),
@@ -244,7 +225,6 @@ def update_heatmap(store):
     pivot = d.groupby(['product_category', 'store_location'])['Total_Bill'].sum().unstack(fill_value=0)
     pivot_pct = pivot.div(pivot.sum(axis=1), axis=0).round(3) * 100
 
-    # If filtered to one store, show category bar chart instead
     if store != 'All Stores':
         cat_rev = d.groupby('product_category')['Total_Bill'].sum().sort_values(ascending=True).reset_index()
         colors  = [CAT_COLORS.get(c, '#aaa') for c in cat_rev['product_category']]
@@ -263,8 +243,7 @@ def update_heatmap(store):
             height=300,
         )
         return fig
-
-    # All stores: heatmap
+    
     fig = go.Figure(go.Heatmap(
         z=pivot_pct.values,
         x=pivot_pct.columns.tolist(),
@@ -285,8 +264,6 @@ def update_heatmap(store):
     )
     return fig
 
-
-# Hour heatmap (static, always all stores)
 @app.callback(
     Output('hour-heatmap', 'figure'),
     Input('store-filter', 'value'),
@@ -330,8 +307,6 @@ def update_hour_heatmap(store):
     )
     return fig
 
-
-# Top 10 products
 @app.callback(
     Output('top-products', 'figure'),
     Input('store-filter', 'value'),
@@ -341,7 +316,6 @@ def update_top_products(store):
     top = d.groupby('product_detail')['Total_Bill'].sum().sort_values(ascending=False).head(10).reset_index()
     top.columns = ['Product', 'Revenue']
 
-    # Get category for color
     cat_map = df.groupby('product_detail')['product_category'].first()
     top['Category'] = top['Product'].map(cat_map)
     colors = [CAT_COLORS.get(c, '#aaa') for c in top['Category']]
@@ -363,7 +337,5 @@ def update_top_products(store):
     )
     return fig
 
-
-# ── Run ───────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     app.run(debug=True)
